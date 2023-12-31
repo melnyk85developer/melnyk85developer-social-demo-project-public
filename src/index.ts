@@ -25,16 +25,21 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 app.get('/courses', (req: Request, res: Response) => {
-  let foundCourses = db.courses
-
   if(req.query.title){
-    foundCourses = foundCourses
-    .filter( c => c.title.indexOf(req.query.title as string) > -1)
+    let searchString = req.query.title.toString()
+    res.json(db.courses.filter( c => c.title.indexOf(searchString) > -1))
+  }else{
+    res.json(db.courses)
   }
-
-  res.json(foundCourses)
 })
-
+app.get('/courses/:coursesTitle', (req: Request, res: Response) => {
+  let cours = db.courses.find(c => c.title === req.params.coursesTitle)
+  if(!cours){
+    res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
+    return;
+  }
+  res.json(cours)
+})
 app.get('/courses/:id', (req: Request, res: Response) => {
   const foundCourses = db.courses.find(c => c.id === +req.params.id)
   if(!foundCourses){
@@ -60,9 +65,14 @@ app.post('/courses', (req: Request, res: Response) => {
 })
 
 app.delete('/courses/:id', (req: Request, res: Response) => {
-  db.courses = db.courses.filter(c => c.id !== +req.params.id)
-
-  res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
+  for(let i = 0; i < db.courses.length; i++){
+    if(db.courses[i].id === +req.params.id){
+      db.courses.splice(i, 1);
+      res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
+      return;
+    }
+  }
+  res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
 })
 
 app.put('/courses/:id', (req: Request, res: Response) => {
@@ -71,13 +81,16 @@ app.put('/courses/:id', (req: Request, res: Response) => {
     return;
   }
   const foundCourses = db.courses.find(c => c.id === +req.params.id)
-  if(!foundCourses){
+  if(foundCourses){
+    foundCourses.title = req.body.title
+    res
+        .status(HTTP_STATUSES.NO_CONTENT_204)
+        .json(foundCourses)
+  }else{
     res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
     return;
   }
-  foundCourses.title = req.body.title
-  
-  res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
+
 })
 
 app.listen(port, () => {
