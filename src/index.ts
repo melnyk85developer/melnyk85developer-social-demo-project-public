@@ -21,9 +21,7 @@ const db = {
     {id: 4, title: 'devops'}
 ]}
 app.get('/', (req: Request, res: Response) => {
-  let foundCourses = db.courses
-
-  res.json(foundCourses)
+  res.json("Выбирайте название курсов!!!")
 })
 
 app.get('/courses', (req: Request, res: Response) => {
