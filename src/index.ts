@@ -20,6 +20,11 @@ const db = {
     {id: 3, title: 'automation qa'},
     {id: 4, title: 'devops'}
 ]}
+app.get('/', (req: Request, res: Response) => {
+  let foundCourses = db.courses
+
+  res.json(foundCourses)
+})
 
 app.get('/courses', (req: Request, res: Response) => {
   let foundCourses = db.courses
