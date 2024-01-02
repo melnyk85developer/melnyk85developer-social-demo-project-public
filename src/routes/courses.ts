@@ -10,6 +10,7 @@ import { RequestWithBody,
          RequestWithQuery } from "../types/types"
 import { CourseType, DBType } from '../db/db';
 import { HTTP_STATUSES } from '../utils';
+import { productsRepository } from '../repositories/addresses-repository';
 
 export const getCourseViewModel = (dbCourse: CourseType): CourseViewModel => {
     return {
@@ -26,16 +27,11 @@ export const getCoursesRouter = (db: DBType) => {
     // })
 
     router.get('/', (req: RequestWithQuery<QueryCourseModel>, res: Response<CourseViewModel[]>) => {
-    
-        if(req.query.title){
-            res.json(db.courses.filter( c => c.title.indexOf(req.query.title) > -1))
-        }else{
-            res.json(db.courses.map(getCourseViewModel))
-        }
-    
+        const foundProdicts = productsRepository.findProducts(req.query.title)
+        res.json(foundProdicts)
     })
     router.get('/:id', (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
-        const foundCourse = db.courses.find(c => c.id === +req.params.id)
+        const foundCourse = productsRepository.findProductById(+req.params.id)
         if(!foundCourse){
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
             return;
@@ -55,42 +51,33 @@ export const getCoursesRouter = (db: DBType) => {
             res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400)
             return;
         }
-        const createCourse: CourseType = {
-            id: +(new Date()),
-            title: req.body.title,
-            studentsCount: 0
-            
-        }
-        db.courses.push(createCourse)
+        const newProduct = productsRepository.createProduct(req.body.title)
         res
             .status(HTTP_STATUSES.CREATED_201)
-            .json(getCourseViewModel(createCourse))
+            .json(getCourseViewModel(newProduct))
     })
     router.delete('/:id', (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
-        for(let i = 0; i < db.courses.length; i++){
-            if(db.courses[i].id === +req.params.id){
-            db.courses.splice(i, 1);
+        const isDeleted = productsRepository.deleteProduct(+req.params.id)
+        if(isDeleted){
             res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
-            return;
-            }
+        }else{
+            res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
         }
-        res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
     })
     router.put('/:id', (req: RequestWithParamsAndBody<URIParamsCourseIdModel, UpdateCourseModel>, res: Response<CourseViewModel>) => {
         if(!req.body.title){
             res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
             return;
         }
-    
-        const foundCourse = db.courses.find(c => c.id === +req.params.id)
-    
-        if(!foundCourse){
+        const isUpdated = productsRepository.updateProduct(+req.params.id, req.body.title)
+        if(isUpdated){
+            const product = productsRepository.findProductById(+req.params.id)
+            res.sendStatus(HTTP_STATUSES.NO_CONTENT_204).json(product)
+        }else{
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
             return;
         }
-    
-        foundCourse.title = req.body.title
-        res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
+        
     
     })
 
