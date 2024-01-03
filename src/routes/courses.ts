@@ -10,7 +10,9 @@ import { RequestWithBody,
          RequestWithQuery } from "../types/types"
 import { CourseType, DBType } from '../db/db';
 import { HTTP_STATUSES } from '../utils';
-import { productsRepository } from '../repositories/addresses-repository';
+import { productsRepository } from '../repositories/products-repository';
+import { body, validationResult } from 'express-validator';
+import { inputValidationMiddleware } from '../middlewares/input-validation-middleware';
 
 export const getCourseViewModel = (dbCourse: CourseType): CourseViewModel => {
     return {
@@ -18,9 +20,11 @@ export const getCourseViewModel = (dbCourse: CourseType): CourseViewModel => {
         title: dbCourse.title
     }
 }
+
 export const getCoursesRouter = (db: DBType) => {
 
     const router = express.Router()
+    const titleValidation = body('title').trim().isLength({ min: 3, max: 10 }).withMessage('Ты прислал либо пустую строку, либо много символов! Минимум 3, максимум 10 символов!')
 
     // router.get('/', (req: Request, res: Response) => {
     //     res.json("Выбирайте название курсов!!!")
@@ -46,11 +50,8 @@ export const getCoursesRouter = (db: DBType) => {
         }
         res.json(cours)
     })
-    router.post('/', (req: RequestWithBody<CreateCourseModel>, res: Response<CourseViewModel>) => {
-        if(!req.body.title){
-            res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400)
-            return;
-        }
+    router.post('/', titleValidation, inputValidationMiddleware, (req: RequestWithBody<CreateCourseModel>, res: Response<CourseViewModel>) => {
+
         const newProduct = productsRepository.createProduct(req.body.title)
         res
             .status(HTTP_STATUSES.CREATED_201)
@@ -64,11 +65,8 @@ export const getCoursesRouter = (db: DBType) => {
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
         }
     })
-    router.put('/:id', (req: RequestWithParamsAndBody<URIParamsCourseIdModel, UpdateCourseModel>, res: Response<CourseViewModel>) => {
-        if(!req.body.title){
-            res.sendStatus(HTTP_STATUSES.BAD_REQUEST_400);
-            return;
-        }
+    router.put('/:id', titleValidation, inputValidationMiddleware, (req: RequestWithParamsAndBody<URIParamsCourseIdModel, UpdateCourseModel>, res: Response<CourseViewModel>) => {
+
         const isUpdated = productsRepository.updateProduct(+req.params.id, req.body.title)
         if(isUpdated){
             const product = productsRepository.findProductById(+req.params.id)
@@ -77,7 +75,6 @@ export const getCoursesRouter = (db: DBType) => {
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
             return;
         }
-        
     
     })
 
