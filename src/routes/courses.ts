@@ -8,18 +8,18 @@ import { RequestWithBody,
          RequestWithParams, 
          RequestWithParamsAndBody, 
          RequestWithQuery } from "../types/types"
-import { CourseType, DBType } from '../db/db';
+import { ProductType, DBType } from '../db/db';
 import { HTTP_STATUSES } from '../utils';
-import { productsRepository } from '../repositories/products-repository';
+import { productsService } from '../domian/products-service';
 import { body, validationResult } from 'express-validator';
 import { inputValidationMiddleware } from '../middlewares/input-validation-middleware';
 
-export const getCourseViewModel = (dbCourse: CourseType): CourseViewModel => {
-    return {
-        id: dbCourse.id,
-        title: dbCourse.title
-    }
-}
+// export const getCourseViewModel = (dbCourse: CourseType): CourseViewModel => {
+//     return {
+//         id: dbCourse.id,
+//         title: dbCourse.title
+//     }
+// }
 
 export const getCoursesRouter = (db: DBType) => {
 
@@ -30,17 +30,17 @@ export const getCoursesRouter = (db: DBType) => {
     //     res.json("Выбирайте название курсов!!!")
     // })
 
-    router.get('/', (req: RequestWithQuery<QueryCourseModel>, res: Response<CourseViewModel[]>) => {
-        const foundProdicts = productsRepository.findProducts(req.query.title)
+    router.get('/', async (req: RequestWithQuery<QueryCourseModel>, res: Response<CourseViewModel[]>) => {
+        const foundProdicts: ProductType[] = await productsService.findProducts(req.query.title)
         res.json(foundProdicts)
     })
-    router.get('/:id', (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
-        const foundCourse = productsRepository.findProductById(+req.params.id)
+    router.get('/:id', async (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
+        const foundCourse = await productsService.findProductById(+req.params.id)
         if(!foundCourse){
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
             return;
         }
-        res.json(getCourseViewModel(foundCourse))
+        res.json(foundCourse)
     })
     router.get('/:coursesTitle', (req: RequestWithParams<{coursesTitle: string}>, res: Response<CourseViewModel>) => {
         let cours = db.courses.find(c => c.title === req.params.coursesTitle)
@@ -50,26 +50,26 @@ export const getCoursesRouter = (db: DBType) => {
         }
         res.json(cours)
     })
-    router.post('/', titleValidation, inputValidationMiddleware, (req: RequestWithBody<CreateCourseModel>, res: Response<CourseViewModel>) => {
+    router.post('/', titleValidation, inputValidationMiddleware, async (req: RequestWithBody<CreateCourseModel>, res: Response<CourseViewModel>) => {
 
-        const newProduct = productsRepository.createProduct(req.body.title)
+        const newProduct: ProductType = await productsService.createProduct(req.body.title)
         res
             .status(HTTP_STATUSES.CREATED_201)
-            .json(getCourseViewModel(newProduct))
+            .json(newProduct)
     })
-    router.delete('/:id', (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
-        const isDeleted = productsRepository.deleteProduct(+req.params.id)
+    router.delete('/:id', async (req: RequestWithParams<URIParamsCourseIdModel>, res: Response<CourseViewModel>) => {
+        const isDeleted = await productsService.deleteProduct(+req.params.id)
         if(isDeleted){
             res.sendStatus(HTTP_STATUSES.NO_CONTENT_204)
         }else{
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
         }
     })
-    router.put('/:id', titleValidation, inputValidationMiddleware, (req: RequestWithParamsAndBody<URIParamsCourseIdModel, UpdateCourseModel>, res: Response<CourseViewModel>) => {
+    router.put('/:id', titleValidation, inputValidationMiddleware, async (req: RequestWithParamsAndBody<URIParamsCourseIdModel, UpdateCourseModel>, res: Response<ProductType | null>) => {
 
-        const isUpdated = productsRepository.updateProduct(+req.params.id, req.body.title)
+        const isUpdated = await productsService.updateProduct(+req.params.id, req.body.title)
         if(isUpdated){
-            const product = productsRepository.findProductById(+req.params.id)
+            const product = await productsService.findProductById(+req.params.id)
             res.sendStatus(HTTP_STATUSES.NO_CONTENT_204).json(product)
         }else{
             res.sendStatus(HTTP_STATUSES.NOT_FOUND_404);
